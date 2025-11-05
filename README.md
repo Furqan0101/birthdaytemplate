@@ -14,10 +14,6 @@ Celebration View: When the countdown hits zero, the card transforms into a celeb
 
 Media Integration: Supports uploading a custom image and linking a Spotify song/playlist.
 
-Background Music: Plays background music (happybirthday.mp3) when the user clicks the "Play Music" button.
-
-Shareable Link: Generate a unique link to share the card with the recipient (requires local storage synchronization for full functionality).
-
 🛠️ Tech Stack
 
 Frontend: React (Functional Components & Hooks)
