@@ -25,5 +25,3 @@ Frontend: React (Functional Components & Hooks)
 Styling: Tailwind CSS (for rapid, responsive, and elegant design)
 
 Deployment: Vercel
-
-**Note:** Replace `src/assets/happybirthday.mp3` with an actual MP3 of 'Happy Birthday' (instrumental) for best effect.
