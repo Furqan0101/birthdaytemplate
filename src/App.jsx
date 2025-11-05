@@ -2,12 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 // ====================================================================
 // --- 1. CORE CONFIGURATION & UTILITIES ---
+// (Audio related constants removed)
 // ====================================================================
 
-// Base64 encoded WAV file for a simple beep/sound (to simulate music without external assets)
-// NOTE: I've updated this to reference your local asset path for your environment. 
-// However, the preview environment cannot load local files, so it will attempt to load this path.
-const music = "/src/assets/happybirthday.mp3"; 
 const LINKEDIN_URL = "https://www.linkedin.com/in/furqan-ahmed-bandey"; // Placeholder LinkedIn URL
 
 // Helper function for display formatting
@@ -18,6 +15,28 @@ const formatDateTime = (rawDateTime) => {
     year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
   });
 };
+
+// Custom Message Box Utility (Replaces alert/confirm)
+const showTemporaryMessage = (message, isError = false) => {
+    const messageBox = document.createElement('div');
+    messageBox.textContent = message;
+    
+    const baseClasses = "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 p-4 rounded-xl shadow-2xl z-50 text-center transition-opacity duration-300 font-sans max-w-xs sm:max-w-md mx-auto";
+    const colorClass = isError ? "bg-red-600 text-white" : "bg-green-500 text-white";
+    
+    messageBox.className = `${baseClasses} ${colorClass} opacity-0`;
+    document.body.appendChild(messageBox);
+    
+    // Animate in
+    setTimeout(() => messageBox.style.opacity = '1', 10);
+    
+    // Animate out and remove
+    setTimeout(() => {
+        messageBox.style.opacity = '0';
+        setTimeout(() => document.body.removeChild(messageBox), 300); // Wait for fade out
+    }, 4000);
+};
+
 
 // ====================================================================
 // --- 2. VISUAL UTILITY COMPONENTS ---
@@ -142,46 +161,46 @@ const HomeView = ({ onCreate }) => {
   const [message, setMessage] = useState("");
   const [spotifyLink, setSpotifyLink] = useState("");
   const [imageFile, setImageFile] = useState(null);
-  const [statusMessage, setStatusMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const goldButton = "w-full bg-[#C49A6E] hover:bg-[#A5855A] text-white py-3 rounded-xl font-semibold transition-all shadow-md mt-6 tracking-wide";
-  const inputStyle = "w-full p-3 mb-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C49A6E] bg-white text-gray-800";
+  const inputStyle = "w-full p-3 mb-4 border border-gray-300 rounded-lg shadow-inner focus:outline-none focus:ring-2 focus:ring-[#C49A6E] bg-white text-gray-800";
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file && file.size > 2097152) { 
-      setStatusMessage("Image size must be less than 2MB.");
+      showTemporaryMessage("Image size must be less than 2MB.", true);
       setImageFile(null);
       return;
     }
     setImageFile(file);
-    setStatusMessage("");
+    showTemporaryMessage(file ? `Image selected: ${file.name}` : "Image cleared.", false);
   };
 
-  const handleCreateCelebration = async () => {
+  const handleCreateCelebration = async (e) => {
+    e.preventDefault();
     if (!recipientName || !senderName || !dateTime) {
-      setStatusMessage("✨ Please fill in Recipient Name, Sender Name, and Date/Time.");
+      showTemporaryMessage("✨ Please fill in Recipient Name, Sender Name, and Date/Time.", true);
       return;
     }
 
     setIsLoading(true);
-    setStatusMessage("Preparing your elegant celebration...");
 
     let imageBase64 = null;
     if (imageFile) {
       try {
         const reader = new FileReader();
-        await new Promise((resolve) => {
+        await new Promise((resolve, reject) => {
           reader.onload = (e) => {
             imageBase64 = e.target.result;
             resolve();
           };
+          reader.onerror = reject;
           reader.readAsDataURL(imageFile);
         });
       } catch (e) {
         console.error("Image read error:", e);
-        setStatusMessage("Error reading image file.");
+        showTemporaryMessage("Error reading image file.", true);
         setIsLoading(false);
         return;
       }
@@ -197,7 +216,7 @@ const HomeView = ({ onCreate }) => {
     // Save the card data to localStorage using the unique ID
     localStorage.setItem(`card-${uniqueId}`, JSON.stringify(newCelebration));
 
-    setStatusMessage("✅ Celebration created! Redirecting...");
+    showTemporaryMessage("✅ Celebration created! Redirecting...", false);
     
     // Pass the data up to the parent App component and trigger the view change
     onCreate(newCelebration); 
@@ -206,59 +225,55 @@ const HomeView = ({ onCreate }) => {
   };
   
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-white text-center p-4">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 text-center p-4">
       <ParticleBackground />
       <div className="relative z-10 p-8 rounded-2xl shadow-2xl max-w-lg w-full bg-white/95 border-t-4 border-[#C49A6E]">
         <h1 className="text-4xl font-serif font-bold text-[#C49A6E] mb-6 tracking-wider">
           🥂 Create Your Elegant Wish 🍾
         </h1>
 
-        <input
-          type="text" placeholder="Recipient Name"
-          value={recipientName} onChange={(e) => setRecipientName(e.target.value)}
-          className={inputStyle}
-        />
-        <input
-          type="text" placeholder="Sender Name (Your Name)"
-          value={senderName} onChange={(e) => setSenderName(e.target.value)}
-          className={inputStyle}
-        />
-        <label className="block text-left mb-2 text-gray-600 font-medium">Celebration Date with Time:</label>
-        <input
-          type="datetime-local" value={dateTime}
-          onChange={(e) => setDateTime(e.target.value)}
-          className={inputStyle}
-        />
-        <textarea
-          placeholder="Personal Message (Max 300 chars)"
-          value={message} onChange={(e) => setMessage(e.target.value.substring(0, 300))}
-          className={`${inputStyle} h-24 resize-none`}
-        />
-        <input
-          type="text" placeholder="Spotify Song/Playlist Link (Optional)"
-          value={spotifyLink} onChange={(e) => setSpotifyLink(e.target.value)}
-          className={inputStyle}
-        />
-        <label className="block text-left mb-2 text-gray-600 font-medium">Upload Image (Optional, max 2MB):</label>
-        <input
-          type="file" accept="image/*"
-          onChange={handleImageChange}
-          className={inputStyle}
-        />
+        <form onSubmit={handleCreateCelebration}>
+          <input
+            type="text" placeholder="Recipient Name"
+            value={recipientName} onChange={(e) => setRecipientName(e.target.value)}
+            className={inputStyle} required
+          />
+          <input
+            type="text" placeholder="Sender Name (Your Name)"
+            value={senderName} onChange={(e) => setSenderName(e.target.value)}
+            className={inputStyle} required
+          />
+          <label className="block text-left mb-2 text-gray-600 font-medium text-sm">Celebration Date with Time:</label>
+          <input
+            type="datetime-local" value={dateTime}
+            onChange={(e) => setDateTime(e.target.value)}
+            className={inputStyle} required
+          />
+          <textarea
+            placeholder="Personal Message (Max 300 chars)"
+            value={message} onChange={(e) => setMessage(e.target.value.substring(0, 300))}
+            className={`${inputStyle} h-24 resize-none`}
+          />
+          <input
+            type="text" placeholder="Spotify Song/Playlist Link (Optional)"
+            value={spotifyLink} onChange={(e) => setSpotifyLink(e.target.value)}
+            className={inputStyle}
+          />
+          <label className="block text-left mb-2 text-gray-600 font-medium text-sm">Upload Image (Optional, max 2MB):</label>
+          <input
+            type="file" accept="image/*"
+            onChange={handleImageChange}
+            className={inputStyle}
+          />
 
-        <button
-          onClick={handleCreateCelebration}
-          disabled={isLoading}
-          className={`${goldButton} ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
-        >
-          {isLoading ? 'Processing...' : 'Generate Elegant Celebration'}
-        </button>
-
-        {statusMessage && (
-          <div className={`mt-4 text-sm font-medium ${statusMessage.startsWith('✅') ? 'text-green-600' : 'text-amber-700'}`}>
-            {statusMessage}
-          </div>
-        )}
+          <button
+            type="submit"
+            disabled={isLoading}
+            className={`${goldButton} ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+          >
+            {isLoading ? 'Processing...' : 'Generate Elegant Celebration'}
+          </button>
+        </form>
       </div>
     </div>
   );
@@ -270,12 +285,11 @@ const HomeView = ({ onCreate }) => {
 // ====================================================================
 
 const CelebrationView = ({ celebrationData, onGoHome }) => {
-  const audioRef = useRef(null);
+  // Audio state and refs removed
   const [countdown, setCountdown] = useState({});
-  const [isPlaying, setIsPlaying] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
 
-  // Countdown & Confetti Effect
+  // --- Countdown & Confetti Effect ---
   useEffect(() => {
     if (!celebrationData.dateTime) return;
     const targetDate = new Date(celebrationData.dateTime).getTime();
@@ -311,33 +325,14 @@ const CelebrationView = ({ celebrationData, onGoHome }) => {
 
     return () => clearInterval(interval);
   }, [celebrationData, showConfetti]);
-
-  // Audio Playback Handler
-  const handlePlayToggle = () => {
-    if (audioRef.current) {
-      if (isPlaying) { 
-        audioRef.current.pause(); 
-      } else { 
-        audioRef.current.volume = 0.4;
-        // Attempt to play, catching the common error where playback is blocked
-        audioRef.current.play().catch(e => {
-            console.error("Audio playback blocked:", e);
-            // Custom message box for blocked playback
-            const messageBox = document.createElement('div');
-            messageBox.textContent = "Audio blocked by browser. Please interact with the page first.";
-            messageBox.className = "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-red-600 text-white p-4 rounded-xl shadow-2xl z-50 text-center";
-            document.body.appendChild(messageBox);
-            setTimeout(() => document.body.removeChild(messageBox), 4000);
-        }); 
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
+  
+  
+  // Audio playback and unlocking logic removed
   
   // Shareable Link feature: Copies a mock URL with the card ID
   const handleShare = () => {
     const uniqueId = celebrationData.id;
-    const mockUrl = `${window.location.origin}/?cardId=${uniqueId}`; 
+    const mockUrl = `${window.location.href.split('?')[0]}?cardId=${uniqueId}`; 
     
     try {
         const tempInput = document.createElement('input');
@@ -347,18 +342,10 @@ const CelebrationView = ({ celebrationData, onGoHome }) => {
         document.execCommand('copy');
         document.body.removeChild(tempInput);
         
-        const messageBox = document.createElement('div');
-        messageBox.textContent = `🔗 Shareable Link Copied! (Recipient needs this app's storage)`;
-        messageBox.className = "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-green-500 text-white p-4 rounded-xl shadow-2xl z-50 text-center";
-        document.body.appendChild(messageBox);
-        setTimeout(() => document.body.removeChild(messageBox), 4000);
+        showTemporaryMessage(`🔗 Shareable Link Copied! (Recipient needs this app's storage)`, false);
         
     } catch (err) {
-        const messageBox = document.createElement('div');
-        messageBox.textContent = "Copy failed. Browser blocked access.";
-        messageBox.className = "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-yellow-500 text-white p-4 rounded-xl shadow-2xl z-50 text-center";
-        document.body.appendChild(messageBox);
-        setTimeout(() => document.body.removeChild(messageBox), 4000);
+        showTemporaryMessage("Copy failed. Browser blocked clipboard access.", true);
     }
   };
 
@@ -416,7 +403,7 @@ const CelebrationView = ({ celebrationData, onGoHome }) => {
           </div>
         </div>
         
-        {/* --- PERSONALIZED CONTENT (Only appears on birthday) --- */}
+        {/* --- PERSONALIZED CONTENT (Only appears on celebration time) --- */}
         {isCelebrationTime && (
           <div className='mt-8 pt-4 border-t border-gray-200'>
             {imageBase64 && (
@@ -448,20 +435,8 @@ const CelebrationView = ({ celebrationData, onGoHome }) => {
           </div>
         )}
         {/* -------------------------------------------------------- */}
-
-
-        {/* Audio Element for background music. Updated src to local path. */}
-        <audio ref={audioRef} src={music} loop />
         
         <div className="mt-10 flex flex-wrap justify-center gap-4">
-          <button 
-            onClick={handlePlayToggle}
-            className={`px-6 py-3 rounded-full font-bold text-sm transition-all shadow-lg border border-gray-300
-              ${isPlaying ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-[#C49A6E] hover:bg-[#A5855A] text-white'}`}
-          >
-            {/* The label now clearly says Play Music */}
-            {isPlaying ? 'Pause Music ⏸️' : 'Play Music 🎵'}
-          </button>
           
           <button 
             onClick={handleShare}
@@ -470,8 +445,6 @@ const CelebrationView = ({ celebrationData, onGoHome }) => {
             🔗 Shareable Link
           </button>
           
-          {/* Removed the Download Card button completely */}
-
           <button 
             onClick={onGoHome} 
             className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-3 rounded-full transition-all font-semibold text-sm"
@@ -492,7 +465,7 @@ const CelebrationView = ({ celebrationData, onGoHome }) => {
 
 export default function App() {
   const [celebrationData, setCelebrationData] = useState(null);
-  const [currentPage, setCurrentPage] = useState('home'); 
+  const [currentPage, setCurrentPage] = useState('loading'); // Start in loading state
 
   // --- Initial Load Logic (Handles Shareable Links) ---
   useEffect(() => {
@@ -515,7 +488,7 @@ export default function App() {
             }
         }
     }
-    // If no cardId or no data found, stay on 'home'
+    // If no cardId or no data found, go to 'home'
     setCurrentPage('home');
   }, []); // Run only on initial mount
 
@@ -523,8 +496,8 @@ export default function App() {
   const handleCreate = useCallback((data) => {
     setCelebrationData(data);
     setCurrentPage('celebration');
-    // Update the URL to include the card ID (without reloading)
-    const newUrl = `${window.location.origin}/?cardId=${data.id}`;
+    // Use relative path modification to avoid the SecurityError when changing the history state.
+    const newUrl = `${window.location.pathname}?cardId=${data.id}`;
     window.history.pushState(null, '', newUrl);
   }, []);
 
@@ -532,10 +505,18 @@ export default function App() {
   const handleGoHome = useCallback(() => {
     setCelebrationData(null);
     setCurrentPage('home');
-    // Clean the URL when going back home
-    window.history.pushState(null, '', window.location.origin);
+    // Use relative path modification to avoid the SecurityError when changing the history state.
+    window.history.pushState(null, '', window.location.pathname);
   }, []);
 
+  if (currentPage === 'loading') {
+    return (
+        <div className="flex items-center justify-center min-h-screen bg-gray-100">
+            <div className="text-xl font-semibold text-gray-600">Loading App...</div>
+        </div>
+    );
+  }
+  
   // Simple In-Memory Router/View Switcher
   if (currentPage === 'celebration' && celebrationData) {
     return (
@@ -547,4 +528,4 @@ export default function App() {
   }
   
   return <HomeView onCreate={handleCreate} />;
-};
+}
